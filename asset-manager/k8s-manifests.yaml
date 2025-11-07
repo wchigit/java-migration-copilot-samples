@@ -1,0 +1,209 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: asset-manager
+  labels:
+    name: asset-manager
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: asset-manager-sa
+  namespace: asset-manager
+  annotations:
+    azure.workload.identity/client-id: "cf9e405e-22fb-4610-99f1-0ba75e5b22d1"
+  labels:
+    azure.workload.identity/use: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: asset-manager-config
+  namespace: asset-manager
+data:
+  AZURE_CLIENT_ID: "cf9e405e-22fb-4610-99f1-0ba75e5b22d1"
+  AZURE_STORAGE_ACCOUNT_NAME: "stuied"
+  AZURE_STORAGE_BLOB_CONTAINER_NAME: "assets"
+  AZURE_SERVICEBUS_NAMESPACE: "sbuied"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://psqluied.postgres.database.azure.com:5432/assetdb?sslmode=require"
+  SPRING_DATASOURCE_USERNAME: "iduied"
+  SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED: "true"
+  SPRING_PROFILES_ACTIVE: "azure"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-manager-web
+  namespace: asset-manager
+  labels:
+    app: asset-manager-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: asset-manager-web
+  template:
+    metadata:
+      labels:
+        app: asset-manager-web
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: asset-manager-sa
+      containers:
+      - name: asset-manager-web
+        image: acruied.azurecr.io/asset-manager-web:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_CLIENT_ID
+        - name: AZURE_STORAGE_ACCOUNT_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_STORAGE_ACCOUNT_NAME
+        - name: AZURE_STORAGE_BLOB_CONTAINER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_STORAGE_BLOB_CONTAINER_NAME
+        - name: AZURE_SERVICEBUS_NAMESPACE
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_SERVICEBUS_NAMESPACE
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_DATASOURCE_URL
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_PROFILES_ACTIVE
+        - name: AZURE_TENANT_ID
+          value: "72f988bf-86f1-41af-91ab-2d7cd011db47"
+        - name: AZURE_SUBSCRIPTION_ID
+          value: "a4ab3025-1b32-4394-92e0-d07c1ebf3787"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asset-manager-web-service
+  namespace: asset-manager
+spec:
+  selector:
+    app: asset-manager-web
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asset-manager-worker
+  namespace: asset-manager
+  labels:
+    app: asset-manager-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asset-manager-worker
+  template:
+    metadata:
+      labels:
+        app: asset-manager-worker
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: asset-manager-sa
+      containers:
+      - name: asset-manager-worker
+        image: acruied.azurecr.io/asset-manager-worker:latest
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_CLIENT_ID
+        - name: AZURE_STORAGE_ACCOUNT_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_STORAGE_ACCOUNT_NAME
+        - name: AZURE_STORAGE_BLOB_CONTAINER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_STORAGE_BLOB_CONTAINER_NAME
+        - name: AZURE_SERVICEBUS_NAMESPACE
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: AZURE_SERVICEBUS_NAMESPACE
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_DATASOURCE_URL
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: asset-manager-config
+              key: SPRING_PROFILES_ACTIVE
+        - name: AZURE_TENANT_ID
+          value: "72f988bf-86f1-41af-91ab-2d7cd011db47"
+        - name: AZURE_SUBSCRIPTION_ID
+          value: "a4ab3025-1b32-4394-92e0-d07c1ebf3787"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"

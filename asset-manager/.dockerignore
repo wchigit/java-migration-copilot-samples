@@ -1,0 +1,42 @@
+# Ignore IDE files
+.vscode/
+.idea/
+*.iml
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore Git files
+.git/
+.gitignore
+
+# Ignore Maven build artifacts (except target JARs which we need)
+**/target/classes/
+**/target/generated-sources/
+**/target/generated-test-sources/
+**/target/maven-archiver/
+**/target/maven-status/
+**/target/test-classes/
+**/target/surefire-reports/
+
+# Keep JAR files in targets for the build
+!**/target/*.jar
+
+# Ignore documentation and scripts
+README.md
+PROMPTS.md
+doc-media/
+scripts/
+
+# Ignore Azure and local configuration
+.azure/
+*.local.properties
+
+# Ignore log files
+*.log
+logs/
+
+# Ignore temporary files
+*.tmp
+*.temp
